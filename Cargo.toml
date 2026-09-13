@@ -106,6 +106,12 @@ features = ["getrandom"]
 [dependencies.ring]
 version = "0.17"
 
+# Constant-time comparison. `ring::constant_time::verify_slices_are_equal`
+# is deprecated (ring >= 0.17.14) with no in-crate replacement, so the MAC /
+# static-key comparisons use `subtle` directly.
+[dependencies.subtle]
+version = "2"
+
 [dependencies.socket2]
 version = "0.4.7"
 features = ["all"]

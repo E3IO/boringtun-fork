@@ -1,3 +1,6 @@
+// Only constructed by the `ffi` / `device` modules, which are optional and
+// not enabled for the DeepSpace proxy build; keep the parser for those users.
+#[allow(dead_code)]
 pub(crate) struct KeyBytes(pub [u8; 32]);
 
 impl std::str::FromStr for KeyBytes {
@@ -5,6 +8,7 @@ impl std::str::FromStr for KeyBytes {
 
     /// Can parse a secret key from a hex or base64 encoded string.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use base64::Engine;
         let mut internal = [0u8; 32];
 
         match s.len() {
@@ -17,7 +21,7 @@ impl std::str::FromStr for KeyBytes {
             }
             43 | 44 => {
                 // Try to parse as base64
-                if let Ok(decoded_key) = base64::decode(s) {
+                if let Ok(decoded_key) = base64::engine::general_purpose::STANDARD.decode(s) {
                     if decoded_key.len() == internal.len() {
                         internal[..].copy_from_slice(&decoded_key);
                     } else {

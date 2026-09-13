@@ -36,6 +36,17 @@ const INITIAL_CHAIN_HASH: [u8; KEY_LEN] = [
     147, 232, 183, 14, 225, 156, 101, 186, 7, 158, 243,
 ];
 
+/// Constant-time byte-slice equality for MAC / static-key comparisons.
+///
+/// Replaces the deprecated `ring::constant_time::verify_slices_are_equal`.
+/// The length check is not constant time — lengths are not secret here — but
+/// the content comparison visits every byte without short-circuiting.
+#[inline]
+pub(crate) fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    use subtle::ConstantTimeEq;
+    a.ct_eq(b).into()
+}
+
 #[inline]
 pub(crate) fn b2s_hash(data1: &[u8], data2: &[u8]) -> [u8; 32] {
     let mut hash = Blake2s256::new();
@@ -521,11 +532,12 @@ impl Handshake {
             &hash,
         )?;
 
-        ring::constant_time::verify_slices_are_equal(
+        if !constant_time_eq(
             self.params.peer_static_public.as_bytes(),
             &peer_static_public_decrypted,
-        )
-        .map_err(|_| WireGuardError::WrongKey)?;
+        ) {
+            return Err(WireGuardError::WrongKey);
+        }
 
         // initiator.hash = HASH(initiator.hash || msg.encrypted_static)
         hash = b2s_hash(&hash, packet.encrypted_static);
